@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dove-deploy
+  namespace: kkb
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    name: dove-pod
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      replicas: 3
+      containers:
+      - name: dove-container
+        image: chukmunnlee/dov-bear:v5
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+          - containerPort: 3000
+        env: 
+        - name: INSTANCE_NAME
+          value: dove-bear
+        - name: INSTANCE_HASH
+          valueFrom: 
+            fieldRef:
+              fieldPath: status.podIP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000

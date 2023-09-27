@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: kkb # Must defined namespaces
+  name: dove-pod-01
+  labels:
+    name: dove-bear-kawaii
+spec:
+  containers:
+  - name: dove-container
+    image: chukmunnlee/dov-bear:v5
+    imagePullPolicy: IfNotPresent
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    ports:
+      - containerPort: 3000
+    env: 
+    - name: INSTANCE_NAME
+      value: dove-bear
+    - name: INSTANCE_HASH
+      valueFrom: 
+        fieldRef:
+          fieldPath: status.podIP
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 3000
