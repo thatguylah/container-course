@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csapp-deploy
+  namespace: csns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csapp
+      tier: web
+      name: csapp-po
+  template:
+    metadata:
+      name: csapp-po
+      labels:
+        app: csapp
+        tier: web
+        name: csapp-po
+    spec:
+      volumes:
+        - name: data-vol
+          persistentVolumeClaim:
+            claimName: csapp-pvc
+        - name: config-vol 
+          configMap:
+            name: cs-cm
+        - name: tmp-vol
+          emptyDir: {}
+      containers:
+        - name: csapp-container
+          volumeMounts: 
+           - name: data-vol
+             mountPath: /config/workspace
+          image: linuxserver/code-server:amd64-4.17.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8443
+          envFrom:
+            - configMapRef:
+                name: cs-cm
+            - secretRef:
+                name: cs-secret
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #     port: 3000
+          #   initialDelaySeconds: 30
+          #   periodSeconds: 10
+          #   failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: csapp-svc
+  namespace: csns
+  labels:
+    app: csapp
+    tier: web
+    name: csapp-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: csapp
+    tier: web
+    name: csapp-po
+  ports:
+    - port: 8443
+      targetPort: 8443
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cs-ingress
+  namespace: csns
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: code-146.190.193.95.nip.io
+      http:
+        paths:
+          - path: /  # Change this to your desired path
+            pathType: Prefix
+            backend:
+              service:
+                name: csapp-svc
+                port:
+                  number: 8443
