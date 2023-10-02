@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+  namespace: minio
+spec:
+  serviceName: "minio-service"
+  replicas: 4
+  selector:
+    matchLabels:
+      app: minio
+  volumeClaimTemplates:
+  - metadata:
+      name: data-vol
+    spec:
+      accessModes: [ ReadWriteOnce ]
+      storageClassName: do-block-storage
+      resources:
+        requests:
+          storage: 1Gi
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args:
+            - server
+            - --address=:9000
+            - --console-address=:9090
+            - http://minio-{0...3}.minio-service.minio.svc.cluster.local/data
+          command:
+            - minio
+          ports:
+            - containerPort: 9000
+              name: minio
+            - containerPort: 9090
+              name: console
+          volumeMounts:
+          - name: data-vol
+            mountPath: /data
+          resources:
+            requests:
+              memory: "250Mi"
+              cpu: "200m"
+          envFrom:
+            - secretRef:
+                name: minio-credentials
+      volumes:
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-service
+  namespace: minio
+spec:
+  ports:
+    - port: 9000
+      name: minio
+    - port: 9090
+      name: console
+  clusterIP: None
+  selector:
+    app: minio
